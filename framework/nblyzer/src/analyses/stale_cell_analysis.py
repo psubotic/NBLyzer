@@ -114,6 +114,9 @@ class StaleCellAnalysis(Analysis):
             if level == 0:
                 self.abstract_state.impacted_variables[var] = -1
 
+    def filter_state(abstract_state: CodeImpactAS, target_val: int) -> set[str]:
+        return {key for key,val in abstract_state.impacted_variables.items() if val == target_val}
+
     def phi_condition(
         self,
         source_AS: CodeImpactAS,
@@ -122,27 +125,23 @@ class StaleCellAnalysis(Analysis):
         target_IR: IntermediateRepresentations,
         K: int,
     ):
-        if K == 2:
-            if source_AS.max_domain_value <= 0:
+        if not bool(self.all_unbound_vars & source_IR.UDA.defined_vars.keys()):
+            return False
+        
+        if K == 2 and source_AS.max_domain_value <= 1:
+            filtered_proj = self.filter_state(source_AS, 1)
+            if not bool(filtered_proj & pre_summary):
                 return False
 
-            if source_AS.max_domain_value == 1:
-                filtered_proj = {key for key,val in source_AS.impacted_variables.items() if val == 1}
-                if not bool(filtered_proj & pre_summary):
-                    return False
-
         if K == 3 and source_AS.max_domain_value <= 0:
-                filtered_proj = {key for key,val in source_AS.impacted_variables.items() if val == 0}
+                filtered_proj = self.filter_state(source_AS, 0)
                 if not bool(filtered_proj & pre_summary):
                     return False
 
         if not bool(target_IR.UDA.defined_vars) or not bool(self.all_unbound_vars & target_IR.UDA.defined_vars.keys()):
-            filtered_proj = {key for key,val in source_AS.impacted_variables.items() if val == 1}
+            filtered_proj = self.filter_state(source_AS, 1)
             if not bool(filtered_proj & pre_summary):
                 return False
-
-        if not bool(self.all_unbound_vars & source_IR.UDA.defined_vars.keys()):
-            return False
 
         return pre_summary <= source_AS.projection()
 
