@@ -147,5 +147,6 @@ class StaleCellAnalysis(Analysis):
     def calculate_pre(self, cell_IR: IntermediateRepresentations):
         return cell_IR.UDA.unbound_final - self.imports
 
-    def trivial_transformation(self, cell_IR: IntermediateRepresentations):
-        return not bool(cell_IR.UDA.unbound_final)
+    def trivial_transformation(self, cell_IR: IntermediateRepresentations, abstract_state: CodeImpactAS):
+        active_state = {key for key,val in abstract_state.impacted_variables.items() if val >= 0}
+        return not bool(cell_IR.UDA.unbound_final & active_state)

@@ -28,7 +28,7 @@ class Analysis(ABC):
     def calculate_pre(self, cell_IR):
         pass
 
-    def trivial_transformation(self, cell_IR): 
+    def trivial_transformation(self, cell_IR, abstractState): 
         return False
 
     def summarize_result(self, result: Result) -> Result:

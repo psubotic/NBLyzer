@@ -423,6 +423,6 @@ class DataLeakAnalysis(Analysis):
     def calculate_pre(self, cell_IR):
         return cell_IR.UDA.unbound_final
     
-    def trivial_transformation(self, cell_IR: IntermediateRepresentations):
+    def trivial_transformation(self, cell_IR: IntermediateRepresentations, abstract_state: DataLeakAbstractState):
         return False
     

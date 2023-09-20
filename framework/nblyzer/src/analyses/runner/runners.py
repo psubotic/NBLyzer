@@ -24,7 +24,7 @@ class Runner:
     def intra_fixpoint_runner(self, cell_IR: IntermediateRepresentations, analysis: Analysis, as_init: AbstractState, K = None, imports = set()):
         errors = []
         as_entry = deepcopy(as_init)
-        if analysis.trivial_transformation(cell_IR):
+        if analysis.trivial_transformation(cell_IR, as_entry):
             as_entry.aug_join_trivial(cell_IR)
             return as_entry, errors
         
