@@ -113,7 +113,7 @@ class StaleCellAnalysis(Analysis):
             if level == 0:
                 self.abstract_state.impacted_variables[var] = -1
 
-    def filter_state(abstract_state: CodeImpactAS, target_val: int) -> set[str]:
+    def filter_state(self, abstract_state: CodeImpactAS, target_val: int) -> set[str]:
         return {key for key,val in abstract_state.impacted_variables.items() if val == target_val}
 
     def phi_condition(
