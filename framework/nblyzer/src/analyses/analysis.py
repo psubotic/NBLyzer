@@ -22,11 +22,14 @@ class Analysis(ABC):
     def combine_states(self, states):
         pass
 
-    def phi_condition(self, current: set, pre: set, cell_IR):
+    def phi_condition(self, source_AS, pre_summary, source_IR, target_IR, K: int):
         pass
 
     def calculate_pre(self, cell_IR):
         pass
+
+    def trivial_transformation(self, cell_IR): 
+        return False
 
     def summarize_result(self, result: Result) -> Result:
         return result

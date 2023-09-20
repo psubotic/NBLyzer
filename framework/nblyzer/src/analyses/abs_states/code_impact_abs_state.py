@@ -15,6 +15,7 @@ class CodeImpactAS(AbstractState):
     def __init__(self, impacted_variables: dict[str: int] = {}, K: int = 2):
         self.impacted_variables: dict[str, int] = deepcopy(impacted_variables)
         self.K: int = K
+        self.max_domain_value: int = 0
 
     def __eq__(self, other: CodeImpactAS) -> bool:
         return self.impacted_variables.keys() == other.impacted_variables.keys() and self.K == other.K
@@ -30,10 +31,15 @@ class CodeImpactAS(AbstractState):
                 self.impacted_variables[var] = max(self.impacted_variables[var], other.impacted_variables[var])
             else:
                 self.impacted_variables[var] = other.impacted_variables[var]
+            
         self.K = max(self.K, other.K)
-    
+        self.max_domain_value = max(self.max_domain_value, other.max_domain_value)
+
     def contains(self, other: CodeImpactAS) -> bool:
-        return other.impacted_variables.keys() <= self.impacted_variables.keys()
+        container: set[int] = {key for key, val in self.impacted_variables.items() if val >= 0}
+        containee: set[int] = {key for key, val in other.impacted_variables.items() if val >= 0}
+
+        return containee <= container
 
     def condition(self, cell_IR: IntermediateRepresentations, node, errors) -> list:
         for var, level in self.impacted_variables.items():
@@ -51,6 +57,11 @@ class CodeImpactAS(AbstractState):
             self.impacted_variables[var] = max(self.impacted_variables[var], level)
         else:
             self.impacted_variables[var] = level
+        self.max_domain_value = max(self.impacted_variables[var], self.max_domain_value)
+
+    def aug_join_trivial(self, cell_IR: IntermediateRepresentations):
+        for var in cell_IR.UDA.defined_vars:
+            self.set_var_level(var, -1000)
 
     def __str__(self) -> str:        
         impacted_var_str: str = "("

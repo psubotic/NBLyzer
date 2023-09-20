@@ -31,6 +31,7 @@ class StaleCellAnalysis(Analysis):
             assigned_vars = assign_parser.assigned_variables
             if len(def_vars):
                 for def_var in def_vars:
+                    as_transformed.set_var_level(def_var, -1000)
                     for var in assigned_vars & as_transformed.impacted_variables.keys() - def_vars - self.imports:
                         if as_transformed.impacted_variables[var] != -1:
                             if var in cell_IR.UDA.def_use_chains.unbound_names and var not in cell_IR.UDA.defined_vars:
@@ -83,7 +84,6 @@ class StaleCellAnalysis(Analysis):
             cpath=[],
             results=Result()
         )
-
         stat.log_end()
         self.stats.append(stat)
         return runner, result, init_as
@@ -94,6 +94,10 @@ class StaleCellAnalysis(Analysis):
             self.imports.update(cell_IR.UDA.imports)
 
     def analyze_notebook(self, notebook_IR, old_cell_IR=None, level=20, filename=""):
+        self._find_all_imports(notebook_IR)
+        if bool(self.calculate_pre(notebook_IR[old_cell_IR.cell_id])):
+            return Result()
+
         return self._run_fixpoint_analysis(notebook_IR, old_cell_IR, level, filename)[1]
 
     def update_abstract_state(self, cell_IR, notebook_IR):
@@ -110,11 +114,40 @@ class StaleCellAnalysis(Analysis):
             if level == 0:
                 self.abstract_state.impacted_variables[var] = -1
 
-    def phi_condition(self, current: set, pre: set, cell_IR):
-        if len(self.all_unbound_vars.intersection(cell_IR.UDA.defined_vars.keys())):
-            return pre <= current
-        else:
-            False
+    def phi_condition(
+        self,
+        source_AS: CodeImpactAS,
+        pre_summary: set,
+        source_IR: IntermediateRepresentations,
+        target_IR: IntermediateRepresentations,
+        K: int,
+    ):
+        if K == 2:
+            if source_AS.max_domain_value <= 0:
+                return False
 
-    def calculate_pre(self, cell_IR:IntermediateRepresentations):
+            if source_AS.max_domain_value == 1:
+                filtered_proj = {key for key,val in source_AS.impacted_variables.items() if val == 1}
+                if not bool(filtered_proj & pre_summary):
+                    return False
+
+        if K == 3 and source_AS.max_domain_value <= 0:
+                filtered_proj = {key for key,val in source_AS.impacted_variables.items() if val == 0}
+                if not bool(filtered_proj & pre_summary):
+                    return False
+
+        if not bool(target_IR.UDA.defined_vars) or not bool(self.all_unbound_vars & target_IR.UDA.defined_vars.keys()):
+            filtered_proj = {key for key,val in source_AS.impacted_variables.items() if val == 1}
+            if not bool(filtered_proj & pre_summary):
+                return False
+
+        if not bool(self.all_unbound_vars & source_IR.UDA.defined_vars.keys()):
+            return False
+
+        return pre_summary <= source_AS.projection()
+
+    def calculate_pre(self, cell_IR: IntermediateRepresentations):
         return cell_IR.UDA.unbound_final - self.imports
+
+    def trivial_transformation(self, cell_IR: IntermediateRepresentations):
+        return not bool(cell_IR.UDA.unbound_final)

@@ -43,3 +43,9 @@ class AbstractState(ABC):
         Checks for errors in state of the cell, returns updated error list if found otherwise doesn't update error list 
         '''
         pass
+
+    @abstractmethod
+    def aug_join_trivial(self, cell_IR):
+        '''
+        Feeds the domain with analysis irrelevant elements for the sake of propagation 
+        '''

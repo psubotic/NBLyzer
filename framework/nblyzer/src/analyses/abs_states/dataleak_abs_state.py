@@ -105,6 +105,9 @@ class DataLeakAbstractState(AbstractState):
         TODO: Resolve variable binding for ones that do not interfere with dataleak domain (currently solved with dull)
         '''
         return {var for var, dom in self.state.items() if dom.dfs.some_rows() or dom.dull}
+    
+    def aug_join_trivial(self, cell_IR: IntermediateRepresentations):
+        pass
 
     def __eq__(self, other: DataLeakAbstractState) -> bool:
         return self.state == other.state
