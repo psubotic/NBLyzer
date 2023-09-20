@@ -22,13 +22,16 @@ class Runner:
         self.cells_summary_map: dict[int, IntermediateRepresentations] = cells_summary_map
     
     def intra_fixpoint_runner(self, cell_IR: IntermediateRepresentations, analysis: Analysis, as_init: AbstractState, K = None, imports = set()):
+        errors = []
+        as_entry = deepcopy(as_init)
+        if analysis.trivial_transformation(cell_IR, as_entry):
+            as_entry.aug_join_trivial(cell_IR)
+            return as_entry, errors
+        
         cfg: CFG = cell_IR.CFG
         node_state_map = defaultdict(type(as_init))
         transform_order: FifoQueue = FifoQueue()
         transform_order.populate(cfg.nodes[0].outgoing)
-        errors = []
-        as_entry = deepcopy(as_init)
-
         while not transform_order.empty():
             next_node: Node = transform_order.pop()
             states_of_ingoing = self.get_states_of_ingoing(next_node.ingoing, node_state_map)
@@ -82,7 +85,7 @@ class Runner:
             for c in self.cells_summary_map.keys():
                 if c != cell_id:
                     pre_summary = analysis.calculate_pre(self.cells_summary_map[c])
-                    if bool(pre_summary) and c in analysis.necessary and analysis.phi_condition(abstract_state.projection(), pre_summary, self.cells_summary_map[cell_id]):
+                    if c in analysis.necessary and analysis.phi_condition(abstract_state, pre_summary, self.cells_summary_map[cell_id], self.cells_summary_map[c], K):
                         self.stats.log_phi(True)
                         results = self.inter_fixpoint_runner(analysis, c, abstract_state, K - 1, deepcopy(cpath), results)
                     else:

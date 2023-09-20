@@ -5,9 +5,10 @@ from __future__ import annotations
 from copy import deepcopy
 from enum import Enum
 
-class ErrorType(Enum):
+class ErrorType(str, Enum):
     CRITICAL = "CRITICAL"
     TERMINAL = "TERMINAL"
+
 
 class ErrorInfo(dict):
     def __init__(self, cell_id, line, label, error_type, error_message):
@@ -84,6 +85,26 @@ class Result:
                 error_json += f',"path":{path_result.path}'
             resultJSON += error_json + '},'
         resultJSON = resultJSON[:-1] + "]"
+        return resultJSON
+    
+    def dumps_better(self, with_path: bool = False) -> dict[str, dict]:
+        if not len(self.path_results):
+            return []
+        resultJSON = []
+        for path_result in self.path_results:
+            error_json = dict[str, str]()
+            error_json['cell_id'] = path_result.path[-1]
+            error_json['errors'] = list[list[str]]()
+
+            for err in path_result.error_infos:
+                errty = err.error_type
+                new_err = {"line":err.line,"label":err.label, "error_type":errty, "message":err.error_message}
+                error_json['errors'].append(new_err)
+                
+            if with_path:
+                error_json['path'] = path_result.path
+
+            resultJSON.append(error_json)
         return resultJSON
     
     def join_by_cell_id(self) -> Result:

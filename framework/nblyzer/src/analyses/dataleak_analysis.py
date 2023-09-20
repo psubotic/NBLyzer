@@ -281,7 +281,14 @@ class DataLeakAnalysis(Analysis):
         Extracts function name depending on its invocation form: as plain name or attribute of other name.
         '''
         func = cfg_node.ast_node.func
-        return func.id if isinstance(cfg_node.ast_node.func, ast.Name) else func.attr 
+        if isinstance(func, ast.Name):
+            return func.id
+        elif isinstance(func, ast.Call):
+            if isinstance(func.func, ast.Name):
+                return func.func.id
+            else:
+                return func.attr
+        return func.attr
 
 
     def _extract_kw(self, cfg_node, name):
@@ -346,8 +353,8 @@ class DataLeakAnalysis(Analysis):
 
         return as_transformed.state[cfg_node.left_hand_side]
 
-    def phi_condition(self, current: set, pre: set, cell_IR: IntermediateRepresentations):
-        return (pre <= current)
+    def phi_condition(self, source_AS: DataLeakAbstractState, pre_summary: set, source_IR: IntermediateRepresentations = None, target_IR: IntermediateRepresentations = None, K: int = None):
+        return pre_summary <= source_AS.projection()
 
     def update_abstract_state(self, cell_IR, notebook_IR):
         self.abstract_state, _ = Runner(self.stats, defaultdict(DataLeakAbstractState), notebook_IR).intra_fixpoint_runner(cell_IR, self, self.abstract_state)
@@ -385,7 +392,7 @@ class DataLeakAnalysis(Analysis):
         self.notebook_IR: dict[int, IntermediateRepresentations] = notebook_IR
 
         pre = notebook_IR[old_cell_IR.cell_id].UDA.def_use_chains.unbound_names - notebook_IR[old_cell_IR.cell_id].UDA.funcs
-        if not self.phi_condition(self.abstract_state.projection(), pre, old_cell_IR):
+        if not self.phi_condition(self.abstract_state, pre):
             return Result()
 
         stat = Stats(old_cell_IR.cell_id, filename) 
@@ -415,3 +422,7 @@ class DataLeakAnalysis(Analysis):
 
     def calculate_pre(self, cell_IR):
         return cell_IR.UDA.unbound_final
+    
+    def trivial_transformation(self, cell_IR: IntermediateRepresentations, abstract_state: DataLeakAbstractState):
+        return False
+    
